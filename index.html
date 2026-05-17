@@ -164,12 +164,12 @@
   /* Grid */
   .clock-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 32px;
   }
-  @media (max-width: 1300px) { .clock-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 1000px) { .clock-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+  @media (max-width: 1100px) { .clock-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 750px) { .clock-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
   @media (max-width: 480px) { .clock-grid { grid-template-columns: 1fr; gap: 14px; } }
 
   /* Clock card */
@@ -818,7 +818,6 @@ if (!window.matchMedia('(display-mode: standalone)').matches) {
 const LOCATIONS = [
   { city: 'Maku', country: 'Iran', flag: '🦁☀️', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 37.1435, lon: 45.3781 },
   { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 41.0082, lon: 28.9784 },
-  { city: 'Izmir', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#fbbf24', accent: 'var(--accent-4)', lat: 38.4192, lon: 27.1287 },
   { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
   { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 },
 ];
