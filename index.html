@@ -288,15 +288,6 @@
     margin-top: 6px;
     font-family: 'Inter', sans-serif;
   }
-  .persian-date-inline {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    font-weight: 400;
-    margin-bottom: 8px;
-    font-family: 'Inter', sans-serif;
-    direction: rtl;
-    letter-spacing: 0.02em;
-  }
 
   /* Weather section */
   .weather-section {
@@ -585,6 +576,18 @@
 
   <div class="bottom-section">
     <div class="calendar-card">
+      <div class="persian-cal">
+        <div class="persian-cal-title">
+          📅 تقویم شمسی
+          <div class="persian-cal-nav">
+            <button onclick="changePersianMonth(-1)" title="Previous month">‹</button>
+            <span class="persian-cal-month-label" id="persianCalMonthLabel"></span>
+            <button onclick="changePersianMonth(1)" title="Next month">›</button>
+          </div>
+        </div>
+        <div class="persian-cal-grid" id="persianCalendarGrid"></div>
+        <div class="persian-date-display" id="persianDateDisplay"></div>
+      </div>
       <div class="calendar-title">
         📅 Calendar
         <div class="calendar-nav">
@@ -911,10 +914,6 @@ function updatePersianDateDisplay() {
   const p = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
   const dateStr = `${p.day} ${PERSIAN_MONTHS[p.month - 1]} ${p.year}`;
   
-  // Update inline date under the time
-  const inlineEl = document.getElementById('persianDateInline');
-  if (inlineEl) inlineEl.textContent = dateStr;
-  
   // Update calendar display
   const el = document.getElementById('persianDateDisplay');
   if (el) el.textContent = dateStr;
@@ -1090,7 +1089,6 @@ function renderClocks() {
       <div class="card-time">
         ${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>
       </div>
-      ${loc.city === 'Maku' ? '<div class="persian-date-inline" id="persianDateInline"></div>' : ''}
       <div class="card-date">${dateStr}</div>
       <div class="card-day" style="background:${loc.color}22;color:${loc.color};border:1px solid ${loc.color}33;">
         ${new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' })}
@@ -1098,19 +1096,6 @@ function renderClocks() {
       <div class="weather-section" id="weather-${loc.tz}">
         <span class="weather-loading">⏳ Loading weather…</span>
       </div>
-      ${loc.city === 'Maku' ? `
-      <div class="persian-cal">
-        <div class="persian-cal-title">
-          📅 تقویم شمسی
-          <div class="persian-cal-nav">
-            <button onclick="changePersianMonth(-1)" title="Previous month">‹</button>
-            <span class="persian-cal-month-label" id="persianCalMonthLabel"></span>
-            <button onclick="changePersianMonth(1)" title="Next month">›</button>
-          </div>
-        </div>
-        <div class="persian-cal-grid" id="persianCalendarGrid"></div>
-        <div class="persian-date-display" id="persianDateDisplay"></div>
-      </div>` : ''}
       <div class="holidays" id="holidays-${loc.tz}"></div>
     `;
     grid.appendChild(card);
