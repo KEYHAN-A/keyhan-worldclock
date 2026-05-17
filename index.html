@@ -621,7 +621,7 @@
 <script>
 // ─── Configuration ───
 const LOCATIONS = [
-  { city: 'Maku', country: 'Iran', flag: '🇮🇷', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
+  { city: 'Maku', country: 'Iran', flag: '🦁☀️', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
   { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 41.0082, lon: 28.9784 },
   { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
   { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 },
@@ -797,6 +797,19 @@ function getHolidaysForTz(tz) {
 // ─── Persian (Solar Hijri) Calendar ───
 const PERSIAN_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 const PERSIAN_DAYS = ['ش','ی','د','س','چ','پ','ج'];
+const PERSIAN_WEEKDAYS = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+const PERSIAN_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+
+function toPersianDigits(num) {
+  return String(num).replace(/[0-9]/g, d => PERSIAN_DIGITS[parseInt(d)]);
+}
+
+function getPersianDateDisplay(date) {
+  const p = gregorianToPersian(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  const dayOfWeek = date.getDay();
+  return `${PERSIAN_WEEKDAYS[dayOfWeek]} ${toPersianDigits(p.day)} ${PERSIAN_MONTHS[p.month - 1]} ${toPersianDigits(p.year)}`;
+}
+
 let persianCalYear, persianCalMonth;
 
 // Jalali calendar conversion (reliable algorithm)
@@ -1102,7 +1115,7 @@ function renderClocks() {
       <div class="card-time">
         ${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>
       </div>
-      <div class="card-date">${dateStr}</div>
+      <div class="card-date">${loc.city === 'Maku' ? getPersianDateDisplay(new Date()) : dateStr}</div>
       <div class="card-day" style="background:${loc.color}22;color:${loc.color};border:1px solid ${loc.color}33;">
         ${new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' })}
       </div>
@@ -1133,7 +1146,7 @@ function updateClocks() {
     const dateEl = weatherEl.querySelector('.card-date');
     if (timeEl) timeEl.innerHTML = `${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>`;
     if (dayEl) dayEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' });
-    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (dateEl) dateEl.textContent = loc.city === 'Maku' ? getPersianDateDisplay(new Date()) : new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   });
   updateHolidaysInCards();
   updatePersianDateDisplay();
