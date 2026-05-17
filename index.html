@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WorldClock">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Multi-timezone world clock with live weather, Persian & Gregorian calendar, and holiday tracking">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <title>World Clock — Multi-Zone</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -21,17 +31,29 @@
     --accent-5: #34d399;
     --radius: 20px;
     --radius-sm: 12px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0a0a1a;
     color: var(--text-primary);
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Animated gradient blobs */
@@ -73,16 +95,17 @@
     z-index: 1;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 40px 24px 60px;
+    padding: calc(24px + var(--safe-top)) max(24px, var(--safe-left)) calc(40px + var(--safe-bottom)) max(24px, var(--safe-right));
   }
 
   /* Header */
   .header {
     text-align: center;
-    margin-bottom: 48px;
+    margin-bottom: 32px;
+    padding-top: 8px;
   }
   .header h1 {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.03em;
     background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
@@ -91,10 +114,52 @@
     background-clip: text;
   }
   .header .subtitle {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  /* Install banner */
+  .install-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-sm);
+    background: rgba(124,92,252,0.12);
+    border: 1px solid rgba(124,92,252,0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .install-banner.visible { display: flex; }
+  .install-banner span {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-top: 6px;
-    font-weight: 400;
+  }
+  .install-btn {
+    background: var(--accent-1);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .install-btn:hover { background: #6a48e6; transform: scale(1.05); }
+  .install-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    line-height: 1;
   }
 
   /* Grid */
@@ -102,23 +167,25 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
   }
   @media (max-width: 1100px) { .clock-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 750px) { .clock-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 480px) { .clock-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 750px) { .clock-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+  @media (max-width: 480px) { .clock-grid { grid-template-columns: 1fr; gap: 14px; } }
 
   /* Clock card */
   .clock-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 28px 24px 24px;
+    padding: 24px 20px 20px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .clock-card::before {
     content: '';
@@ -134,16 +201,29 @@
     transform: translateY(-2px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.3);
   }
+  @media (hover: none) {
+    .clock-card:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
 
   .card-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .card-flag {
     font-size: 1.5rem;
     line-height: 1;
+    flex-shrink: 0;
+  }
+  .card-flag img {
+    width: 1.5rem;
+    height: auto;
+    border-radius: 3px;
+    vertical-align: middle;
   }
   .card-location {
     display: flex;
@@ -168,11 +248,12 @@
     border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     margin-left: auto;
+    flex-shrink: 0;
   }
 
   .card-time {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 2.6rem;
+    font-size: 2.4rem;
     font-weight: 600;
     letter-spacing: -0.04em;
     line-height: 1;
@@ -180,14 +261,14 @@
     color: var(--text-primary);
   }
   .card-time .seconds {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--text-secondary);
     font-weight: 400;
     vertical-align: super;
     margin-left: 2px;
   }
   .card-time .ampm {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
     font-weight: 500;
     margin-left: 6px;
@@ -195,18 +276,18 @@
   }
 
   .card-date {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
     font-weight: 400;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .card-day {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 500;
     padding: 4px 10px;
     border-radius: 8px;
     display: inline-block;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   /* Persian calendar section */
@@ -239,13 +320,14 @@
     border: 1px solid rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.7);
     border-radius: 6px;
-    width: 24px; height: 24px;
+    width: 28px; height: 28px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
   }
   .persian-cal-nav button:hover {
     background: rgba(255,255,255,0.15);
@@ -276,6 +358,10 @@
     font-weight: 400;
     color: rgba(255,255,255,0.75);
     transition: all 0.15s;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .persian-day:hover {
     background: rgba(255,255,255,0.08);
@@ -370,6 +456,7 @@
     border: 1px solid rgba(255,255,255,0.08);
     color: var(--text-secondary);
     white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
   }
   .holiday-badge.today {
     background: rgba(124,92,252,0.15);
@@ -400,14 +487,14 @@
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 28px 24px;
+    padding: 24px 20px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
   }
   .calendar-title {
     font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -423,13 +510,14 @@
     border: 1px solid rgba(255,255,255,0.1);
     color: var(--text-secondary);
     border-radius: 8px;
-    width: 30px; height: 30px;
+    width: 32px; height: 32px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    -webkit-tap-highlight-color: transparent;
   }
   .calendar-nav button:hover {
     background: rgba(255,255,255,0.12);
@@ -459,12 +547,16 @@
   }
   .cal-day {
     font-size: 0.78rem;
-    padding: 7px 0;
+    padding: 8px 0;
     border-radius: 8px;
     cursor: default;
     transition: all 0.15s;
     font-weight: 400;
     color: var(--text-secondary);
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .cal-day.today {
     background: var(--accent-1);
@@ -484,14 +576,14 @@
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 28px 24px;
+    padding: 24px 20px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
   }
   .holidays-title {
     font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -576,6 +668,67 @@
     color: var(--text-muted);
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 480px) {
+    .app {
+      padding: calc(16px + var(--safe-top)) max(16px, var(--safe-left)) calc(32px + var(--safe-bottom)) max(16px, var(--safe-right));
+    }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 1.35rem; }
+    .header .subtitle { font-size: 0.78rem; }
+    .clock-card { padding: 20px 16px 18px; }
+    .card-city { font-size: 1rem; }
+    .card-country { font-size: 0.75rem; }
+    .card-timezone { font-size: 0.65rem; padding: 2px 6px; }
+    .card-time { font-size: 2.2rem; }
+    .card-time .seconds { font-size: 0.9rem; }
+    .card-time .ampm { font-size: 0.78rem; }
+    .card-date { font-size: 0.78rem; }
+    .card-day { font-size: 0.74rem; padding: 3px 8px; }
+    .weather-section { padding: 10px 12px; }
+    .weather-icon { font-size: 1.8rem; }
+    .weather-temp { font-size: 1.3rem; }
+    .weather-detail { font-size: 0.62rem; }
+    .persian-cal { padding: 14px 14px; }
+    .persian-day { font-size: 0.65rem; min-height: 26px; }
+    .calendar-card, .holidays-card { padding: 20px 16px; }
+    .calendar-title, .holidays-title { font-size: 0.95rem; }
+    .cal-day { font-size: 0.75rem; min-height: 30px; }
+    .holiday-item { padding: 8px 10px; gap: 8px; }
+    .holiday-name { font-size: 0.78rem; }
+    .holiday-date { font-size: 0.72rem; min-width: 50px; }
+    .holiday-days-left { font-size: 0.62rem; }
+  }
+
+  /* Small phone */
+  @media (max-width: 360px) {
+    .card-time { font-size: 2rem; }
+    .card-city { font-size: 0.92rem; }
+    .weather-details { gap: 8px; }
+    .weather-detail { font-size: 0.6rem; }
+  }
+
+  /* Landscape mobile */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .app { padding: 12px 16px; }
+    .header { margin-bottom: 16px; }
+    .header h1 { font-size: 1.2rem; }
+    .clock-grid { gap: 10px; margin-bottom: 16px; }
+    .clock-card { padding: 14px 12px 12px; }
+    .card-time { font-size: 1.8rem; }
+    .weather-section { margin-bottom: 8px; padding: 8px 10px; }
+    .holidays { min-height: 22px; }
+    .bottom-section { gap: 10px; margin-bottom: 16px; }
+    .calendar-card, .holidays-card { padding: 16px 14px; }
+  }
+
+  /* Large screens */
+  @media (min-width: 1600px) {
+    .app { max-width: 1600px; }
+    .clock-grid { gap: 20px; }
+    .card-time { font-size: 3rem; }
+  }
 </style>
 </head>
 <body>
@@ -583,6 +736,12 @@
   <div class="header">
     <h1>🌐 World Clock</h1>
     <div class="subtitle">Time · Weather · Calendar · Holidays</div>
+  </div>
+
+  <div class="install-banner" id="installBanner">
+    <span>Add to Home Screen</span>
+    <button class="install-btn" id="installBtn">Install App</button>
+    <button class="install-dismiss" id="installDismiss">✕</button>
   </div>
 
   <div class="clock-grid" id="clockGrid"></div>
@@ -619,6 +778,43 @@
 </div>
 
 <script>
+// ─── PWA Service Worker Registration ───
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// ─── PWA Install Prompt ───
+let deferredPrompt = null;
+const installBanner = document.getElementById('installBanner');
+const installBtn = document.getElementById('installBtn');
+const installDismiss = document.getElementById('installDismiss');
+
+if (!window.matchMedia('(display-mode: standalone)').matches) {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.classList.add('visible');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      installBanner.classList.remove('visible');
+    }
+    deferredPrompt = null;
+  });
+
+  installDismiss.addEventListener('click', () => {
+    installBanner.classList.remove('visible');
+  });
+}
+
 // ─── Configuration ───
 const LOCATIONS = [
   { city: 'Maku', country: 'Iran', flag: '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Lion_and_Sun_Tricolor_Flag.svg/120px-Lion_and_Sun_Tricolor_Flag.svg.png" alt="Iran" style="width:1.5rem;height:auto;border-radius:3px;" />', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
@@ -721,7 +917,7 @@ function getHolidaysForTz(tz) {
     ];
     for (const t of turkish) {
       const d = new Date(year, t.m - 1, t.d);
-      holidays.push({ date: d, name: t.n, location: 'Istanbul / Izmir, Turkey', tz: 'Europe/Istanbul' });
+      holidays.push({ date: d, name: t.n, location: 'Istanbul, Turkey', tz: 'Europe/Istanbul' });
     }
   }
 
@@ -814,7 +1010,6 @@ let persianCalYear, persianCalMonth;
 
 // Jalali calendar conversion (reliable algorithm)
 function gregorianToPersian(gy, gm, gd) {
-  // Convert Gregorian to Jalali
   let g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
   let gy2 = (gm > 2) ? gy + 1 : gy;
   let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
@@ -861,12 +1056,10 @@ function jalaliToGregorian(jy, jm, jd) {
 }
 
 function isJalaliLeap(jy) {
-  // Check if Jalali year is a leap year (366 days)
   const breaks = [1,5,9,13,17,22,26,30];
   const cycle = jy % 2820;
   const pos = breaks.indexOf(cycle % 128);
   if (pos !== -1) return true;
-  // Check the 33-year cycle
   const r = ((jy - 1) % 2820 + 2820) % 2820;
   const jump = Math.floor((r + 38) / 63) * 4 - Math.floor(((r + 38) % 63) / 4);
   return jump === 1;
@@ -879,7 +1072,6 @@ function getJalaliMonthDays(jy, jm) {
 }
 
 function getJalaliYearFirstDay(jy) {
-  // Day of week for Farvardin 1 of Jalali year (0=Sunday)
   const newYear = jalaliToGregorian(jy, 1, 1);
   return newYear.getDay();
 }
@@ -940,7 +1132,6 @@ function updatePersianDateDisplay() {
   const p = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
   const dateStr = `${p.day} ${PERSIAN_MONTHS[p.month - 1]} ${p.year}`;
   
-  // Update calendar display
   const el = document.getElementById('persianDateDisplay');
   if (el) el.textContent = dateStr;
 }
@@ -1127,10 +1318,8 @@ function renderClocks() {
     grid.appendChild(card);
   });
 
-  // Initialize Persian calendar
   renderPersianCalendar();
   updatePersianDateDisplay();
-
   updateHolidaysInCards();
 }
 
@@ -1167,11 +1356,9 @@ function updateWeatherInCards() {
     const daily = data.daily;
     const weatherInfo = getWeatherInfo(current.weather_code, current.is_day);
 
-    // Wind direction to compass
     const windDirs = ['N','NE','E','SE','S','SW','W','NW'];
     const windDir = windDirs[Math.round(current.wind_direction_10m / 45) % 8];
 
-    // Sun progress
     const sunrise = daily.sunrise[0] ? new Date(daily.sunrise[0]) : null;
     const sunset = daily.sunset[0] ? new Date(daily.sunset[0]) : null;
     const nowMs = Date.now();
@@ -1323,7 +1510,7 @@ renderCalendar();
 renderUpcomingHolidays();
 fetchAllWeather();
 setInterval(tick, 1000);
-setInterval(fetchAllWeather, 10 * 60 * 1000); // Refresh weather every 10 min
+setInterval(fetchAllWeather, 10 * 60 * 1000);
 </script>
 </body>
 </html>
