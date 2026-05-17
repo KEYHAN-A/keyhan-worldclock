@@ -775,150 +775,80 @@ const PERSIAN_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر
 const PERSIAN_DAYS = ['ش','ی','د','س','چ','پ','ج'];
 let persianCalYear, persianCalMonth;
 
-function gregorianToPersian(date) {
-  const d = new Date(date);
-  const g_d = d.getDate(), g_m = d.getMonth() + 1, g_y = d.getFullYear();
-  const g_day_of_year = (new Date(g_y, g_m, g_d) - new Date(g_y, 0, g_d)) / 86400000 + 1;
-  
-  // Jalali calendar conversion
-  const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
-  const jump = [0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1];
-  let gy = g_y - 1600;
-  let gm = g_m - 1;
-  let gd = g_d;
-  let g_day_no = g_day_of_year + g_d_m[gm];
-  let p_day_no = 0;
-  
-  let j_n = Math.floor((gy + 1) / 63);
-  if (jump[j_n] >= gm && g_day_no > g_d_m[gm] + jump[j_n]) p_day_no++;
-  
-  let j_1 = (33 * j_n + 3) % 4;
-  if (j_1 == 4 && jump[j_n + 1] == 1) p_day_no++;
-  
-  let j_y = gy - 63 * j_n + 282;
-  
-  const p_m = Math.floor((p_day_no + 79) / 31);
-  const p_d = (p_day_no + 79) % 31 + 1;
-  const p_y = j_y + 1284 * Math.floor((p_m + 10) / 33);
-  
-  return { year: p_y, month: p_m, day: p_d };
-}
-
-function getPersianMonthDays(year, month) {
-  if (month <= 6) return 31;
-  if (month <= 11) return 30;
-  // Esfand - check leap year
-  const rem = ((year - 1) % 2820 + 47) * 68 % 128;
-  return rem < 68 ? 30 : 29;
-}
-
-function getPersianYearFirstDay(year) {
-  // Calculate what day of week the Persian year starts on
-  const jdn = persianToJDN(year, 1, 1);
-  return (jdn + 1) % 7;
-}
-
-function persianToJDN(p_y, p_m, p_d) {
-  // Jalali calendar to Julian Day Number
-  const r = ((p_y - 1) % 2820 + 2820) % 2820;
-  const jump = Math.floor((r + 38) / 63) * 4 - Math.floor(((r + 38) % 63) / 4);
-  const gy = p_y + 2820 * Math.floor((p_y + 38 + 2820) / 2820) - 474;
-  
-  // Approximate Gregorian date for Persian New Year
-  let gy_approx = p_y + 621;
-  let leap_persian = 0;
-  const cycles = Math.floor((p_y - 1) / 2820) * 2820 + 1;
-  const remainder = p_y - cycles;
-  if (remainder <= 0) {
-    leap_persian = Math.floor((31 * (p_y + 10) + 28) / 33) % 4;
+// Jalali calendar conversion (reliable algorithm)
+function gregorianToPersian(gy, gm, gd) {
+  // Convert Gregorian to Jalali
+  let g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+  let gy2 = (gm > 2) ? gy + 1 : gy;
+  let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+  let jy = -1595 + (33 * Math.floor(days / 12053));
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) {
+    jy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  let jm, jd;
+  if (days < 186) {
+    jm = 1 + Math.floor(days / 31);
+    jd = 1 + (days % 31);
   } else {
-    const r2 = (p_y - 1) % 2820;
-    leap_persian = Math.floor((r2 + 38) / 63) * 4 - Math.floor(((r2 + 38) % 63) / 4);
-    if (leap_persian === 0) leap_persian = 1;
+    jm = 7 + Math.floor((days - 186) / 30);
+    jd = 1 + ((days - 186) % 30);
   }
-  
-  // Use a simpler approach: convert via known algorithm
-  const n = p_y - 474;
-  const i = Math.floor(n / 2820) * 2820 + 474;
-  const j = p_y - i + 474;
-  const k = Math.floor((j + 38) / 63) * 4;
-  
-  // Simplified: use the existing getGregorianFromPersian in reverse
-  // For now, use a lookup-based approach for the first day
-  const anchors = [
-    { pYear: 1349, dayOfWeek: 6 }, // Farvardin 1, 1349 = March 21, 1970 = Tuesday = 2 (0=Sun)
-    { pYear: 1350, dayOfWeek: 7 },
-    { pYear: 1351, dayOfWeek: 1 },
-    { pYear: 1352, dayOfWeek: 2 },
-    { pYear: 1353, dayOfWeek: 3 },
-    { pYear: 1354, dayOfWeek: 4 },
-    { pYear: 1355, dayOfWeek: 5 },
-    { pYear: 1356, dayOfWeek: 6 },
-    { pYear: 1357, dayOfWeek: 0 },
-    { pYear: 1358, dayOfWeek: 1 },
-    { pYear: 1359, dayOfWeek: 2 },
-    { pYear: 1360, dayOfWeek: 3 },
-    { pYear: 1361, dayOfWeek: 4 },
-    { pYear: 1362, dayOfWeek: 5 },
-    { pYear: 1363, dayOfWeek: 6 },
-    { pYear: 1364, dayOfWeek: 0 },
-    { pYear: 1365, dayOfWeek: 1 },
-    { pYear: 1366, dayOfWeek: 2 },
-    { pYear: 1367, dayOfWeek: 3 },
-    { pYear: 1368, dayOfWeek: 4 },
-    { pYear: 1369, dayOfWeek: 5 },
-    { pYear: 1370, dayOfWeek: 6 },
-    { pYear: 1371, dayOfWeek: 0 },
-    { pYear: 1372, dayOfWeek: 1 },
-    { pYear: 1373, dayOfWeek: 2 },
-    { pYear: 1374, dayOfWeek: 3 },
-    { pYear: 1375, dayOfWeek: 4 },
-    { pYear: 1376, dayOfWeek: 5 },
-    { pYear: 1377, dayOfWeek: 6 },
-    { pYear: 1378, dayOfWeek: 0 },
-    { pYear: 1379, dayOfWeek: 1 },
-    { pYear: 1380, dayOfWeek: 2 },
-    { pYear: 1381, dayOfWeek: 3 },
-    { pYear: 1382, dayOfWeek: 4 },
-    { pYear: 1383, dayOfWeek: 5 },
-    { pYear: 1384, dayOfWeek: 6 },
-    { pYear: 1385, dayOfWeek: 0 },
-    { pYear: 1386, dayOfWeek: 1 },
-    { pYear: 1387, dayOfWeek: 2 },
-    { pYear: 1388, dayOfWeek: 3 },
-    { pYear: 1389, dayOfWeek: 4 },
-    { pYear: 1390, dayOfWeek: 5 },
-    { pYear: 1391, dayOfWeek: 6 },
-    { pYear: 1392, dayOfWeek: 0 },
-    { pYear: 1393, dayOfWeek: 1 },
-    { pYear: 1394, dayOfWeek: 2 },
-    { pYear: 1395, dayOfWeek: 3 },
-    { pYear: 1396, dayOfWeek: 4 },
-    { pYear: 1397, dayOfWeek: 5 },
-    { pYear: 1398, dayOfWeek: 6 },
-    { pYear: 1399, dayOfWeek: 0 },
-    { pYear: 1400, dayOfWeek: 1 },
-    { pYear: 1401, dayOfWeek: 2 },
-    { pYear: 1402, dayOfWeek: 3 },
-    { pYear: 1403, dayOfWeek: 4 },
-    { pYear: 1404, dayOfWeek: 5 },
-    { pYear: 1405, dayOfWeek: 6 },
-  ];
-  
-  let anchor = anchors.find(a => a.pYear <= year) || anchors[0];
-  let daysDiff = year - anchor.pYear;
-  for (let y = anchor.pYear; y < year; y++) {
-    const rem = (y - 1) % 2820;
-    if (rem >= 0 && Math.floor((31 * (y + 10) + 28) / 33) % 4 !== Math.floor((31 * (y + 9) + 28) / 33) % 4) {
-      daysDiff += 1;
-    }
-  }
-  return (anchor.dayOfWeek + daysDiff) % 7;
+  return { year: jy, month: jm, day: jd };
 }
 
-let persianCalYear, persianCalMonth;
-const now2 = new Date();
-const persianToday = gregorianToPersian(now2);
+function jalaliToGregorian(jy, jm, jd) {
+  let jy2 = jy + 1595;
+  let days = -355668 + (365 * jy2) + (Math.floor(jy2 / 33) * 8) + Math.floor(((jy2 % 33) + 3) / 4) + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+  let gy = 400 * Math.floor(days / 146097);
+  days %= 146097;
+  if (days > 36524) {
+    gy += 100 * Math.floor(--days / 36524);
+    days %= 36524;
+    if (days >= 365) days++;
+  }
+  gy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) {
+    gy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  let gd = days + 1;
+  let sal_a = [0,31,((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28,31,30,31,30,31,31,30,31,30,31];
+  let gm;
+  for (gm = 0; gm < 13 && gd > sal_a[gm]; gm++) gd -= sal_a[gm];
+  return new Date(gy, gm - 1, gd);
+}
+
+function isJalaliLeap(jy) {
+  // Check if Jalali year is a leap year (366 days)
+  const breaks = [1,5,9,13,17,22,26,30];
+  const cycle = jy % 2820;
+  const pos = breaks.indexOf(cycle % 128);
+  if (pos !== -1) return true;
+  // Check the 33-year cycle
+  const r = ((jy - 1) % 2820 + 2820) % 2820;
+  const jump = Math.floor((r + 38) / 63) * 4 - Math.floor(((r + 38) % 63) / 4);
+  return jump === 1;
+}
+
+function getJalaliMonthDays(jy, jm) {
+  if (jm <= 6) return 31;
+  if (jm <= 11) return 30;
+  return isJalaliLeap(jy) ? 30 : 29;
+}
+
+function getJalaliYearFirstDay(jy) {
+  // Day of week for Farvardin 1 of Jalali year (0=Sunday)
+  const newYear = jalaliToGregorian(jy, 1, 1);
+  return newYear.getDay();
+}
+
+let now2 = new Date();
+let persianToday = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
 persianCalYear = persianToday.year;
 persianCalMonth = persianToday.month;
 
@@ -929,25 +859,22 @@ function renderPersianCalendar() {
   const label = document.getElementById('persianCalMonthLabel');
   label.textContent = `${PERSIAN_MONTHS[persianCalMonth - 1]} ${persianCalYear}`;
   
-  const dayNames = PERSIAN_DAYS;
-  let html = dayNames.map(d => `<div class="persian-day-name">${d}</div>`).join('');
+  let html = PERSIAN_DAYS.map(d => `<div class="persian-day-name">${d}</div>`).join('');
   
-  const firstDayOfWeek = getPersianYearFirstDay(persianCalYear);
-  const monthOffset = (() => {
-    let totalDays = 0;
-    for (let m = 1; m < persianCalMonth; m++) {
-      totalDays += getPersianMonthDays(persianCalYear, m);
-    }
-    return totalDays % 7;
-  })();
+  const firstDayOfWeek = getJalaliYearFirstDay(persianCalYear);
+  let monthOffset = 0;
+  for (let m = 1; m < persianCalMonth; m++) {
+    monthOffset += getJalaliMonthDays(persianCalYear, m);
+  }
+  monthOffset %= 7;
   
   const firstDay = (firstDayOfWeek + monthOffset) % 7;
-  const daysInMonth = getPersianMonthDays(persianCalYear, persianCalMonth);
+  const daysInMonth = getJalaliMonthDays(persianCalYear, persianCalMonth);
   const prevMonth = persianCalMonth === 1 ? 12 : persianCalMonth - 1;
   const prevYear = persianCalMonth === 1 ? persianCalYear - 1 : persianCalYear;
-  const daysInPrev = getPersianMonthDays(prevYear, prevMonth);
+  const daysInPrev = getJalaliMonthDays(prevYear, prevMonth);
   
-  const today = gregorianToPersian(new Date());
+  const today = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
   
   for (let i = firstDay; i > 0; i--) {
     html += `<div class="persian-day other-month">${daysInPrev - i + 1}</div>`;
@@ -975,8 +902,14 @@ function changePersianMonth(delta) {
 function updatePersianDateDisplay() {
   const el = document.getElementById('persianDateDisplay');
   if (!el) return;
-  const p = gregorianToPersian(new Date());
+  const p = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
   el.textContent = `${p.day} ${PERSIAN_MONTHS[p.month - 1]} ${p.year}`;
+}
+
+function tick() {
+  now2 = new Date();
+  updateClocks();
+  updatePersianDateDisplay();
 }
 
 // ─── Solar Hijri to Gregorian ───
@@ -1363,7 +1296,7 @@ renderClocks();
 renderCalendar();
 renderUpcomingHolidays();
 fetchAllWeather();
-setInterval(updateClocks, 1000);
+setInterval(tick, 1000);
 setInterval(fetchAllWeather, 10 * 60 * 1000); // Refresh weather every 10 min
 </script>
 </body>
