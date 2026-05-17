@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Clock — Multi-Zone</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --glass-bg: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.12);
+    --glass-hover: rgba(255,255,255,0.10);
+    --text-primary: #f0f0f5;
+    --text-secondary: rgba(255,255,255,0.55);
+    --text-muted: rgba(255,255,255,0.30);
+    --accent-1: #7c5cfc;
+    --accent-2: #5ce1e6;
+    --accent-3: #f472b6;
+    --accent-4: #fbbf24;
+    --accent-5: #34d399;
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0a0a1a;
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated gradient blobs */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+  }
+  body::before {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, #7c5cfc, #5c3cdc);
+    top: -150px; left: -100px;
+    animation: blob1 20s ease-in-out infinite alternate;
+  }
+  body::after {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #5ce1e6, #3b82f6);
+    bottom: -100px; right: -80px;
+    animation: blob2 18s ease-in-out infinite alternate;
+  }
+
+  @keyframes blob1 {
+    0% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(200px, 100px) scale(1.2); }
+    100% { transform: translate(50px, 200px) scale(0.9); }
+  }
+  @keyframes blob2 {
+    0% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(-180px, -80px) scale(1.15); }
+    100% { transform: translate(-60px, -150px) scale(0.85); }
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header .subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    font-weight: 400;
+  }
+
+  /* Grid */
+  .clock-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  @media (max-width: 1100px) { .clock-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 750px) { .clock-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .clock-grid { grid-template-columns: 1fr; } }
+
+  /* Clock card */
+  .clock-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 28px 24px 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .clock-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+    opacity: 0.7;
+  }
+  .clock-card:hover {
+    background: var(--glass-hover);
+    border-color: rgba(255,255,255,0.18);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .card-flag {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .card-location {
+    display: flex;
+    flex-direction: column;
+  }
+  .card-city {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .card-country {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .card-timezone {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: auto;
+  }
+
+  .card-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.6rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 2px;
+    color: var(--text-primary);
+  }
+  .card-time .seconds {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    vertical-align: super;
+    margin-left: 2px;
+  }
+  .card-time .ampm {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .card-date {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-bottom: 12px;
+  }
+  .card-day {
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+
+  /* Weather section */
+  .weather-section {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .weather-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .weather-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .weather-temp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  .weather-desc {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+  }
+  .weather-details {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .weather-detail {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .weather-detail span {
+    color: var(--text-secondary);
+  }
+  .weather-loading {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .weather-error {
+    font-size: 0.68rem;
+    color: rgba(239,68,68,0.6);
+    font-style: italic;
+  }
+
+  /* Holiday badges */
+  .holidays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 28px;
+  }
+  .holiday-badge {
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .holiday-badge.today {
+    background: rgba(124,92,252,0.15);
+    border-color: rgba(124,92,252,0.3);
+    color: var(--accent-1);
+  }
+  .holiday-badge.upcoming {
+    background: rgba(251,191,36,0.10);
+    border-color: rgba(251,191,36,0.2);
+    color: var(--accent-4);
+  }
+  .no-holiday {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Bottom section */
+  .bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) { .bottom-section { grid-template-columns: 1fr; } }
+
+  /* Calendar */
+  .calendar-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .calendar-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+  .calendar-nav button {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+  }
+  .calendar-nav button:hover {
+    background: rgba(255,255,255,0.12);
+    color: var(--text-primary);
+  }
+  .calendar-month-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 130px;
+    text-align: center;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    text-align: center;
+  }
+  .cal-day-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .cal-day {
+    font-size: 0.78rem;
+    padding: 7px 0;
+    border-radius: 8px;
+    cursor: default;
+    transition: all 0.15s;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+  .cal-day.today {
+    background: var(--accent-1);
+    color: white;
+    font-weight: 600;
+  }
+  .cal-day.other-month {
+    color: var(--text-muted);
+    opacity: 0.4;
+  }
+  .cal-day.has-holiday {
+    border-bottom: 2px solid var(--accent-4);
+  }
+
+  /* Upcoming Holidays */
+  .holidays-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .holidays-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .holiday-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .holiday-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.2s;
+  }
+  .holiday-item:hover {
+    background: rgba(255,255,255,0.06);
+  }
+  .holiday-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--accent-4);
+    min-width: 55px;
+    padding-top: 1px;
+  }
+  .holiday-info {
+    flex: 1;
+  }
+  .holiday-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .holiday-location {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .holiday-days-left {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+
+  /* Pulse animation for seconds */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .seconds { animation: pulse 1s ease-in-out infinite; }
+
+  /* Sunrise/sunset bar */
+  .sun-bar {
+    margin-top: 8px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .sun-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #fbbf24, #f97316);
+    transition: width 0.5s;
+  }
+  .sun-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+  .sun-time {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🌐 World Clock</h1>
+    <div class="subtitle">Time · Weather · Calendar · Holidays</div>
+  </div>
+
+  <div class="clock-grid" id="clockGrid"></div>
+
+  <div class="bottom-section">
+    <div class="calendar-card">
+      <div class="calendar-title">
+        📅 Calendar
+        <div class="calendar-nav">
+          <button onclick="changeMonth(-1)" title="Previous month">‹</button>
+          <span class="calendar-month-label" id="calMonthLabel"></span>
+          <button onclick="changeMonth(1)" title="Next month">›</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+    <div class="holidays-card">
+      <div class="holidays-title">🎉 Upcoming Holidays</div>
+      <ul class="holiday-list" id="holidayList"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Configuration ───
+const LOCATIONS = [
+  { city: 'Maku', country: 'Iran', flag: '🇮🇷', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
+  { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 41.0082, lon: 28.9784 },
+  { city: 'Izmir', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 38.4192, lon: 27.1287 },
+  { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
+  { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 },
+];
+
+// ─── Weather Code mapping ───
+const WEATHER_CODES = {
+  0: { desc: 'Clear sky', icon: '☀️' },
+  1: { desc: 'Mainly clear', icon: '🌤️' },
+  2: { desc: 'Partly cloudy', icon: '⛅' },
+  3: { desc: 'Overcast', icon: '☁️' },
+  45: { desc: 'Foggy', icon: '🌫️' },
+  48: { desc: 'Rime fog', icon: '🌫️' },
+  51: { desc: 'Light drizzle', icon: '🌦️' },
+  53: { desc: 'Moderate drizzle', icon: '🌦️' },
+  55: { desc: 'Dense drizzle', icon: '🌧️' },
+  56: { desc: 'Freezing drizzle', icon: '🌧️' },
+  57: { desc: 'Dense freezing drizzle', icon: '🌧️' },
+  61: { desc: 'Light rain', icon: '🌦️' },
+  63: { desc: 'Moderate rain', icon: '🌧️' },
+  65: { desc: 'Heavy rain', icon: '🌧️' },
+  66: { desc: 'Freezing rain', icon: '🌧️' },
+  67: { desc: 'Heavy freezing rain', icon: '🌧️' },
+  71: { desc: 'Light snow', icon: '🌨️' },
+  73: { desc: 'Moderate snow', icon: '❄️' },
+  75: { desc: 'Heavy snow', icon: '❄️' },
+  77: { desc: 'Snow grains', icon: '🌨️' },
+  80: { desc: 'Light showers', icon: '🌦️' },
+  81: { desc: 'Moderate showers', icon: '🌧️' },
+  82: { desc: 'Violent showers', icon: '⛈️' },
+  85: { desc: 'Light snow showers', icon: '🌨️' },
+  86: { desc: 'Heavy snow showers', icon: '❄️' },
+  95: { desc: 'Thunderstorm', icon: '⛈️' },
+  96: { desc: 'Thunderstorm with hail', icon: '⛈️' },
+  99: { desc: 'Thunderstorm with heavy hail', icon: '⛈️' },
+};
+
+function getWeatherInfo(code, isDay) {
+  const info = WEATHER_CODES[code] || { desc: 'Unknown', icon: '🌡️' };
+  if (!isDay && code <= 1) return { ...info, icon: '🌙' };
+  if (!isDay && code === 2) return { ...info, icon: '☁️' };
+  return info;
+}
+
+// ─── Holiday Data ───
+function getHolidaysForTz(tz) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const holidays = [];
+
+  if (tz === 'Asia/Tehran') {
+    const persianHolidays = [
+      { day: 1, month: 1, name: 'Nowruz (Persian New Year)' },
+      { day: 13, month: 1, name: 'Sizdah Bedar' },
+      { day: 12, month: 3, name: 'Eid al-Fitr' },
+      { day: 1, month: 9, name: 'Eid al-Adha' },
+      { day: 27, month: 7, name: 'Miraj' },
+      { day: 15, month: 8, name: 'Shab-e-Barat' },
+      { day: 2, month: 12, name: 'Arbaeen' },
+      { day: 3, month: 12, name: 'Eid al-Ghadir' },
+      { day: 24, month: 10, name: 'Qadr Night' },
+      { day: 28, month: 10, name: 'Eid al-Fitr (2)' },
+      { day: 27, month: 11, name: 'Ashura' },
+      { day: 12, month: 7, name: 'Mawlid' },
+    ];
+    for (const h of persianHolidays) {
+      const gregorian = getGregorianFromPersian(h.day, h.month, year);
+      if (gregorian) holidays.push({ date: gregorian, name: h.name, location: 'Maku, Iran', tz: 'Asia/Tehran' });
+    }
+    const fixedIranian = [
+      { d: 22, m: 3, n: 'Republic Day' },
+      { d: 13, m: 4, n: 'Quds Day' },
+    ];
+    for (const f of fixedIranian) {
+      const d = new Date(year, f.m - 1, f.d);
+      holidays.push({ date: d, name: f.n, location: 'Maku, Iran', tz: 'Asia/Tehran' });
+    }
+  }
+
+  if (tz === 'Europe/Istanbul') {
+    const turkish = [
+      { d: 1, m: 1, n: "New Year's Day" },
+      { d: 23, m: 4, n: "National Sovereignty Day" },
+      { d: 1, m: 5, n: 'Labour Day' },
+      { d: 19, m: 5, n: "Children's Day" },
+      { d: 19, m: 5, n: "Memorial of Atatürk" },
+      { d: 30, m: 5, n: 'Victory Day' },
+      { d: 30, m: 7, n: 'Eid al-Fitr (approx)' },
+      { d: 31, m: 7, n: 'Eid al-Fitr Day 2 (approx)' },
+      { d: 15, m: 7, n: 'Democracy Night' },
+      { d: 25, m: 8, n: 'Eid al-Adha (approx)' },
+      { d: 26, m: 8, n: 'Eid al-Adha Day 2 (approx)' },
+      { d: 27, m: 8, n: 'Eid al-Adha Day 3 (approx)' },
+      { d: 28, m: 8, n: 'Eid al-Adha Day 4 (approx)' },
+      { d: 30, m: 10, n: 'Republic Day' },
+      { d: 29, m: 11, n: 'Commemoration of Çanakkale' },
+    ];
+    for (const t of turkish) {
+      const d = new Date(year, t.m - 1, t.d);
+      holidays.push({ date: d, name: t.n, location: 'Istanbul / Izmir, Turkey', tz: 'Europe/Istanbul' });
+    }
+  }
+
+  if (tz === 'Europe/Berlin') {
+    const german = [
+      { d: 1, m: 1, n: "New Year's Day" },
+      { d: 1, m: 5, n: 'Labour Day' },
+      { d: 3, m: 10, n: 'German Unity Day' },
+      { d: 25, m: 12, n: 'Christmas Day' },
+      { d: 26, m: 12, n: 'Boxing Day' },
+      { d: 8, m: 3, n: "Women's Day" },
+    ];
+    const easter = computeEaster(year);
+    const easterHolidays = [
+      { offset: -2, n: 'Ash Wednesday' },
+      { offset: -3, n: 'Good Friday' },
+      { offset: 0, n: 'Easter Sunday' },
+      { offset: 1, n: 'Easter Monday' },
+      { offset: 39, n: 'Ascension Day' },
+      { offset: 49, n: 'Pentecost' },
+      { offset: 60, n: 'Corpus Christi' },
+    ];
+    for (const e of easterHolidays) {
+      const d = new Date(easter);
+      d.setDate(d.getDate() + e.offset);
+      const existing = german.find(g => g.d === d.getDate() && g.m === d.getMonth() + 1);
+      if (!existing) german.push({ d: d.getDate(), m: d.getMonth() + 1, n: e.n });
+    }
+    for (const g of german) {
+      const d = new Date(year, g.m - 1, g.d);
+      holidays.push({ date: d, name: g.n, location: 'Hamburg, Germany', tz: 'Europe/Berlin' });
+    }
+  }
+
+  if (tz === 'America/New_York') {
+    const american = [
+      { d: 1, m: 1, n: "New Year's Day" },
+      { d: 17, m: 1, n: "Martin Luther King Jr. Day" },
+      { d: 19, m: 6, n: 'Juneteenth' },
+      { d: 4, m: 7, n: 'Independence Day' },
+      { d: 1, m: 9, n: 'Labor Day' },
+      { d: 11, m: 10, n: 'Columbus Day' },
+      { d: 9, m: 11, n: "Veterans Day" },
+      { d: 28, m: 11, n: 'Thanksgiving' },
+      { d: 25, m: 12, n: 'Christmas Day' },
+    ];
+    const mlk = findNthMonday(year, 0, 2);
+    if (!american.find(a => a.d === mlk.getDate() && a.m === 1)) {
+      american.push({ d: mlk.getDate(), m: 1, n: "MLK Day (calc)" });
+    }
+    const labor = findNthMonday(year, 8, 0);
+    if (!american.find(a => a.d === labor.getDate() && a.m === 9)) {
+      american.push({ d: labor.getDate(), m: 9, n: 'Labor Day (calc)' });
+    }
+    const thanksgiving = findNthMonday(year, 10, 3);
+    if (!american.find(a => a.d === thanksgiving.getDate() && a.m === 11)) {
+      american.push({ d: thanksgiving.getDate(), m: 11, n: 'Thanksgiving (calc)' });
+    }
+    const presidents = findNthMonday(year, 1, 2);
+    american.push({ d: presidents.getDate(), m: 2, n: "Presidents' Day" });
+    const memDay = findLastMonday(year, 4);
+    american.push({ d: memDay.getDate(), m: 5, n: 'Memorial Day' });
+
+    for (const a of american) {
+      const d = new Date(year, a.m - 1, a.d);
+      holidays.push({ date: d, name: a.n, location: "Washington D.C., US", tz: 'America/New_York' });
+    }
+  }
+
+  return holidays;
+}
+
+// ─── Solar Hijri to Gregorian ───
+function getGregorianFromPersian(day, month, year) {
+  const anchors = [
+    { pYear: 1349, gYear: 1970, gMonth: 2, gDay: 21 },
+    { pYear: 1350, gYear: 1971, gMonth: 3, gDay: 21 },
+    { pYear: 1351, gYear: 1972, gMonth: 3, gDay: 20 },
+    { pYear: 1352, gYear: 1973, gMonth: 3, gDay: 21 },
+    { pYear: 1353, gYear: 1974, gMonth: 3, gDay: 21 },
+    { pYear: 1354, gYear: 1975, gMonth: 3, gDay: 21 },
+    { pYear: 1355, gYear: 1976, gMonth: 3, gDay: 21 },
+    { pYear: 1356, gYear: 1977, gMonth: 3, gDay: 22 },
+    { pYear: 1357, gYear: 1978, gMonth: 3, gDay: 21 },
+    { pYear: 1358, gYear: 1979, gMonth: 3, gDay: 21 },
+    { pYear: 1359, gYear: 1980, gMonth: 3, gDay: 20 },
+    { pYear: 1360, gYear: 1981, gMonth: 3, gDay: 21 },
+    { pYear: 1361, gYear: 1982, gMonth: 3, gDay: 21 },
+    { pYear: 1362, gYear: 1983, gMonth: 3, gDay: 21 },
+    { pYear: 1363, gYear: 1984, gMonth: 3, gDay: 20 },
+    { pYear: 1364, gYear: 1985, gMonth: 3, gDay: 21 },
+    { pYear: 1365, gYear: 1986, gMonth: 3, gDay: 21 },
+    { pYear: 1366, gYear: 1987, gMonth: 3, gDay: 21 },
+    { pYear: 1367, gYear: 1988, gMonth: 3, gDay: 20 },
+    { pYear: 1368, gYear: 1989, gMonth: 3, gDay: 21 },
+    { pYear: 1369, gYear: 1990, gMonth: 3, gDay: 21 },
+    { pYear: 1370, gYear: 1991, gMonth: 3, gDay: 21 },
+    { pYear: 1371, gYear: 1992, gMonth: 3, gDay: 20 },
+    { pYear: 1372, gYear: 1993, gMonth: 3, gDay: 21 },
+    { pYear: 1373, gYear: 1994, gMonth: 3, gDay: 21 },
+    { pYear: 1374, gYear: 1995, gMonth: 3, gDay: 21 },
+    { pYear: 1375, gYear: 1996, gMonth: 3, gDay: 20 },
+    { pYear: 1376, gYear: 1997, gMonth: 3, gDay: 21 },
+    { pYear: 1377, gYear: 1998, gMonth: 3, gDay: 21 },
+    { pYear: 1378, gYear: 1999, gMonth: 3, gDay: 21 },
+    { pYear: 1379, gYear: 2000, gMonth: 3, gDay: 20 },
+    { pYear: 1380, gYear: 2001, gMonth: 3, gDay: 21 },
+    { pYear: 1381, gYear: 2002, gMonth: 3, gDay: 21 },
+    { pYear: 1382, gYear: 2003, gMonth: 3, gDay: 21 },
+    { pYear: 1383, gYear: 2004, gMonth: 3, gDay: 20 },
+    { pYear: 1384, gYear: 2005, gMonth: 3, gDay: 21 },
+    { pYear: 1385, gYear: 2006, gMonth: 3, gDay: 21 },
+    { pYear: 1386, gYear: 2007, gMonth: 3, gDay: 21 },
+    { pYear: 1387, gYear: 2008, gMonth: 3, gDay: 20 },
+    { pYear: 1388, gYear: 2009, gMonth: 3, gDay: 21 },
+    { pYear: 1389, gYear: 2010, gMonth: 3, gDay: 21 },
+    { pYear: 1390, gYear: 2011, gMonth: 3, gDay: 21 },
+    { pYear: 1391, gYear: 2012, gMonth: 3, gDay: 20 },
+    { pYear: 1392, gYear: 2013, gMonth: 3, gDay: 21 },
+    { pYear: 1393, gYear: 2014, gMonth: 3, gDay: 21 },
+    { pYear: 1394, gYear: 2015, gMonth: 3, gDay: 21 },
+    { pYear: 1395, gYear: 2016, gMonth: 3, gDay: 20 },
+    { pYear: 1396, gYear: 2017, gMonth: 3, gDay: 21 },
+    { pYear: 1397, gYear: 2018, gMonth: 3, gDay: 21 },
+    { pYear: 1398, gYear: 2019, gMonth: 3, gDay: 21 },
+    { pYear: 1399, gYear: 2020, gMonth: 3, gDay: 20 },
+    { pYear: 1400, gYear: 2021, gMonth: 3, gDay: 21 },
+    { pYear: 1401, gYear: 2022, gMonth: 3, gDay: 21 },
+    { pYear: 1402, gYear: 2023, gMonth: 3, gDay: 21 },
+    { pYear: 1403, gYear: 2024, gMonth: 3, gDay: 20 },
+    { pYear: 1404, gYear: 2025, gMonth: 3, gDay: 21 },
+    { pYear: 1405, gYear: 2026, gMonth: 3, gDay: 21 },
+  ];
+
+  let anchor = anchors.find(a => a.pYear <= year) || anchors[0];
+  let days = (year - anchor.pYear) * 365;
+  for (let y = anchor.pYear; y < year; y++) {
+    if ((y * 38 + 28) % 33 < 38 % 33 || (y * 38 + 28) % 33 === 0) days += 1;
+  }
+  if (month <= 7) days += (month - 1) * 31;
+  else days += 186 + (month - 7) * 30;
+  days += day - 1;
+  const result = new Date(anchor.gYear, anchor.gMonth, anchor.gDay);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+// ─── Easter Computus ───
+function computeEaster(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day);
+}
+
+function findNthMonday(year, month, n) {
+  let count = 0, d = new Date(year, month, 1);
+  while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
+  d.setDate(d.getDate() + n * 7);
+  return d;
+}
+
+function findLastMonday(year, month) {
+  let d = new Date(year, month + 1, 0);
+  while (d.getDay() !== 1) d.setDate(d.getDate() - 1);
+  return d;
+}
+
+// ─── State ───
+let calYear, calMonth;
+const now = new Date();
+calYear = now.getFullYear();
+calMonth = now.getMonth();
+
+// ─── Fetch Weather ───
+async function fetchWeather(loc) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index,is_day&daily=sunrise,sunset&timezone=${encodeURIComponent(loc.tz)}&forecast_days=1`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn(`Weather fetch failed for ${loc.city}:`, err.message);
+    return null;
+  }
+}
+
+async function fetchAllWeather() {
+  const results = await Promise.allSettled(LOCATIONS.map(loc => fetchWeather(loc)));
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled' && result.value) {
+      window._weatherData = window._weatherData || {};
+      window._weatherData[LOCATIONS[i].tz] = result.value;
+    }
+  });
+  updateWeatherInCards();
+}
+
+// ─── Render Clocks ───
+function renderClocks() {
+  const grid = document.getElementById('clockGrid');
+  grid.innerHTML = '';
+
+  LOCATIONS.forEach(loc => {
+    const timeOpts = { timeZone: loc.tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const dateOpts = { timeZone: loc.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const tzOpts = { timeZone: loc.tz, timeZoneName: 'short' };
+
+    const timeStr = new Date().toLocaleTimeString('en-US', timeOpts);
+    const dateStr = new Date().toLocaleDateString('en-US', dateOpts);
+    const tzStr = new Date().toLocaleTimeString('en-US', tzOpts).split(' ').pop();
+
+    const [hours, minutes, seconds] = timeStr.split(/[:\s]/);
+    const ampm = timeStr.includes('PM') ? 'PM' : 'AM';
+
+    const card = document.createElement('div');
+    card.className = 'clock-card';
+    card.style.setProperty('--accent-color', loc.color);
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-flag">${loc.flag}</span>
+        <div class="card-location">
+          <span class="card-city">${loc.city}</span>
+          <span class="card-country">${loc.country}</span>
+        </div>
+        <span class="card-timezone">${tzStr}</span>
+      </div>
+      <div class="card-time">
+        ${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>
+      </div>
+      <div class="card-date">${dateStr}</div>
+      <div class="card-day" style="background:${loc.color}22;color:${loc.color};border:1px solid ${loc.color}33;">
+        ${new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' })}
+      </div>
+      <div class="weather-section" id="weather-${loc.tz}">
+        <span class="weather-loading">⏳ Loading weather…</span>
+      </div>
+      <div class="holidays" id="holidays-${loc.tz}"></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  updateHolidaysInCards();
+}
+
+function updateClocks() {
+  LOCATIONS.forEach(loc => {
+    const timeOpts = { timeZone: loc.tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const [hours, minutes, seconds] = new Date().toLocaleTimeString('en-US', timeOpts).split(/[:\s]/);
+    const ampm = new Date().toLocaleTimeString('en-US', timeOpts).includes('PM') ? 'PM' : 'AM';
+    const weatherEl = document.querySelector(`[id="weather-${loc.tz}"]`)?.parentElement;
+    if (!weatherEl) return;
+    const timeEl = weatherEl.querySelector('.card-time');
+    const dayEl = weatherEl.querySelector('.card-day');
+    const dateEl = weatherEl.querySelector('.card-date');
+    if (timeEl) timeEl.innerHTML = `${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>`;
+    if (dayEl) dayEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' });
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  });
+  updateHolidaysInCards();
+}
+
+function updateWeatherInCards() {
+  const weather = window._weatherData;
+  if (!weather) return;
+
+  LOCATIONS.forEach(loc => {
+    const data = weather[loc.tz];
+    if (!data) return;
+
+    const container = document.getElementById(`weather-${loc.tz}`);
+    if (!container) return;
+
+    const current = data.current;
+    const daily = data.daily;
+    const weatherInfo = getWeatherInfo(current.weather_code, current.is_day);
+
+    // Wind direction to compass
+    const windDirs = ['N','NE','E','SE','S','SW','W','NW'];
+    const windDir = windDirs[Math.round(current.wind_direction_10m / 45) % 8];
+
+    // Sun progress
+    const sunrise = daily.sunrise[0] ? new Date(daily.sunrise[0]) : null;
+    const sunset = daily.sunset[0] ? new Date(daily.sunset[0]) : null;
+    const nowMs = Date.now();
+    let sunProgress = 50;
+    if (sunrise && sunset) {
+      const dayLength = sunset - sunrise;
+      const elapsed = nowMs - sunrise.getTime();
+      sunProgress = Math.max(0, Math.min(100, (elapsed / dayLength) * 100));
+    }
+
+    container.innerHTML = `
+      <div class="weather-main">
+        <span class="weather-icon">${weatherInfo.icon}</span>
+        <div>
+          <div class="weather-temp">${Math.round(current.temperature_2m)}°C</div>
+          <div class="weather-desc">${weatherInfo.desc}</div>
+        </div>
+      </div>
+      <div class="weather-details">
+        <span class="weather-detail">Feels like <span>${Math.round(current.apparent_temperature)}°</span></span>
+        <span class="weather-detail">Humidity <span>${current.relative_humidity_2m}%</span></span>
+        <span class="weather-detail">Wind <span>${Math.round(current.wind_speed_10m)} km/h ${windDir}</span></span>
+        <span class="weather-detail">UV <span>${current.uv_index}</span></span>
+      </div>
+      ${sunrise && sunset ? `
+      <div class="sun-bar"><div class="sun-bar-fill" style="width:${sunProgress}%"></div></div>
+      <div class="sun-times">
+        <span class="sun-time">🌅 ${sunrise.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
+        <span class="sun-time">🌇 ${sunset.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
+      </div>` : ''}
+    `;
+  });
+}
+
+function updateHolidaysInCards() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  LOCATIONS.forEach(loc => {
+    const container = document.getElementById(`holidays-${loc.tz}`);
+    if (!container) return;
+    const holidays = getHolidaysForTz(loc.tz);
+    const near = holidays.filter(h => {
+      const d = new Date(h.date);
+      d.setHours(0,0,0,0);
+      const diff = Math.abs(d - today);
+      return diff < 30 * 86400000;
+    });
+
+    if (near.length === 0) {
+      container.innerHTML = '<span class="no-holiday">No holidays nearby</span>';
+      return;
+    }
+
+    container.innerHTML = near.sort((a,b) => a.date - b.date).slice(0, 4).map(h => {
+      const d = new Date(h.date);
+      d.setHours(0,0,0,0);
+      const diff = d - today;
+      const isToday = diff === 0;
+      const isPast = diff < 0;
+      const cls = isToday ? 'today' : (isPast ? '' : 'upcoming');
+      return `<span class="holiday-badge ${cls}">${isToday ? '🔴 ' : ''}${isPast ? '⬅️ ' : ''}${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${h.name}</span>`;
+    }).join('');
+  });
+}
+
+// ─── Calendar ───
+function renderCalendar() {
+  const grid = document.getElementById('calendarGrid');
+  const label = document.getElementById('calMonthLabel');
+  label.textContent = `${new Date(calYear, calMonth).toLocaleString('en-US',{month:'long'})} ${calYear}`;
+
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+
+  const today = new Date();
+  const todayDate = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+
+  const allHolidays = LOCATIONS.flatMap(loc => getHolidaysForTz(loc.tz));
+  const holidayDays = new Set();
+  allHolidays.forEach(h => {
+    const d = new Date(h.date);
+    if (d.getMonth() === calMonth && d.getFullYear() === calYear) {
+      holidayDays.add(d.getDate());
+    }
+  });
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === todayDate && calMonth === todayMonth && calYear === todayYear;
+    const hasHoliday = holidayDays.has(d);
+    html += `<div class="cal-day${isToday ? ' today' : ''}${hasHoliday ? ' has-holiday' : ''}">${d}</div>`;
+  }
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other-month">${i}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+// ─── Upcoming Holidays ───
+function renderUpcomingHolidays() {
+  const list = document.getElementById('holidayList');
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const allHolidays = LOCATIONS.flatMap(loc => getHolidaysForTz(loc.tz));
+  const upcoming = allHolidays
+    .filter(h => { const d = new Date(h.date); d.setHours(0,0,0,0); return d >= today; })
+    .sort((a,b) => a.date - b.date)
+    .slice(0, 8);
+
+  list.innerHTML = upcoming.map(h => {
+    const d = new Date(h.date);
+    const diff = Math.ceil((d - today) / 86400000);
+    return `
+      <li class="holiday-item">
+        <span class="holiday-date">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        <div class="holiday-info">
+          <div class="holiday-name">${h.name}</div>
+          <div class="holiday-location">${h.location}</div>
+        </div>
+        <span class="holiday-days-left">${diff === 0 ? 'Today!' : diff === 1 ? 'Tomorrow' : `${diff}d left`}</span>
+      </li>
+    `;
+  }).join('');
+}
+
+// ─── Init ───
+renderClocks();
+renderCalendar();
+renderUpcomingHolidays();
+fetchAllWeather();
+setInterval(updateClocks, 1000);
+setInterval(fetchAllWeather, 10 * 60 * 1000); // Refresh weather every 10 min
+</script>
+</body>
+</html>
