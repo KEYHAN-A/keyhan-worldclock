@@ -197,60 +197,6 @@
     opacity: 0.7;
   }
 
-  /* Your Location card */
-  .your-location {
-    grid-column: 1 / -1;
-    background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(92,225,230,0.08));
-    border: 1px solid rgba(124,92,252,0.25);
-  }
-  .your-location:hover {
-    background: linear-gradient(135deg, rgba(124,92,252,0.18), rgba(92,225,230,0.12));
-    border-color: rgba(124,92,252,0.35);
-  }
-  .your-location .card-header {
-    margin-bottom: 4px;
-  }
-  .your-location .card-time {
-    font-size: 2.8rem;
-  }
-  .your-location .card-city {
-    font-size: 1.3rem;
-  }
-  .your-location .card-country {
-    font-size: 0.82rem;
-  }
-  .your-location .card-flag {
-    font-size: 1.8rem;
-  }
-  .your-location .card-timezone {
-    font-size: 0.72rem;
-    padding: 3px 10px;
-    background: rgba(124,92,252,0.15);
-    border-color: rgba(124,92,252,0.3);
-    color: var(--accent-1);
-  }
-  .your-location .weather-section {
-    margin-top: 10px;
-  }
-  .your-location .holidays {
-    margin-top: 8px;
-  }
-  .your-location .holiday-badge {
-    font-size: 0.62rem;
-    padding: 2px 8px;
-  }
-  .your-location .card-day {
-    font-size: 0.8rem;
-  }
-  @media (max-width: 800px) {
-    .your-location .card-time { font-size: 2.4rem; }
-    .your-location .card-city { font-size: 1.15rem; }
-  }
-  @media (max-width: 480px) {
-    .your-location .card-time { font-size: 2rem; }
-    .your-location .card-city { font-size: 1.05rem; }
-  }
-
   .clock-card:hover {
     background: var(--glass-hover);
     border-color: rgba(255,255,255,0.18);
@@ -800,24 +746,6 @@
     <button class="install-dismiss" id="installDismiss">✕</button>
   </div>
 
-  <div class="clock-card your-location" id="yourLocation">
-      <div class="card-header">
-        <span class="card-flag" id="yl-flag">📍</span>
-        <div class="card-location">
-          <span class="card-city" id="yl-city">Detecting location…</span>
-          <span class="card-country" id="yl-country">Please allow location access</span>
-        </div>
-        <span class="card-timezone" id="yl-tz">—</span>
-      </div>
-      <div class="card-time" id="yl-time">--:--<span class="seconds">--</span><span class="ampm">--</span></div>
-      <div class="card-date" id="yl-date">—</div>
-      <div class="card-day" id="yl-day">—</div>
-      <div class="weather-section" id="yl-weather">
-        <span class="weather-loading">⏳ Fetching weather…</span>
-      </div>
-      <div class="holidays" id="yl-holidays"></div>
-    </div>
-
   <div class="clock-grid" id="clockGrid"></div>
 
 
@@ -897,104 +825,6 @@ const LOCATIONS = [
   { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
   { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 }
 ];
-
-// ─── Your Location Card ───
-let userLocation = null;
-
-async function detectUserLocation() {
-  if (!navigator.geolocation) {
-    updateYourLocationUI('Geolocation not supported', 'Your browser does not support geolocation');
-    return;
-  }
-
-  try {
-    const pos = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000
-      });
-    });
-
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-
-    // Reverse geocode via Nominatim (free, no key)
-    let city = 'Your Location';
-    let country = '';
-    let tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    try {
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`);
-      if (geoRes.ok) {
-        const geoData = await geoRes.json();
-        city = geoData.address?.city || geoData.address?.town || geoData.address?.village || geoData.address?.municipality || 'Your Location';
-        country = geoData.address?.country || '';
-        // Try to get timezone from geocoding
-        tz = geoData.address?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-    } catch (e) {
-      console.warn('Geocoding failed:', e.message);
-    }
-
-    userLocation = {
-      city,
-      country,
-      lat,
-      lon,
-      tz
-    };
-
-    // Set timezone display
-    const tzStr = tz.replace(/\//, ' / ');
-    document.getElementById('yl-tz').textContent = tzStr;
-
-    // Detect country flag
-    const flagEmoji = getCountryFlag(country);
-    document.getElementById('yl-flag').textContent = flagEmoji;
-
-    // Update UI
-    document.getElementById('yl-city').textContent = city;
-    document.getElementById('yl-country').textContent = country || 'Unknown';
-    document.getElementById('yl-weather').innerHTML = '<span class="weather-loading">⏳ Fetching weather…</span>';
-
-    // Fetch weather
-    fetchWeather(userLocation).then(data => {
-      if (data && data.current) {
-        renderWeatherForEl('yl-weather', data.current, data.daily);
-      } else {
-        document.getElementById('yl-weather').innerHTML = '<span class="weather-error">Weather unavailable</span>';
-      }
-    });
-
-    // Render holidays
-    renderHolidaysForEl('yl-holidays', tz);
-
-  } catch (err) {
-    console.warn('Geolocation failed:', err.message);
-    updateYourLocationUI('Location access denied', 'Showing default locations below');
-  }
-}
-
-function getCountryFlag(countryName) {
-  if (!countryName) return '🌍';
-  const code = countryName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
-  if (code.length === 2) {
-    return String.fromCodePoint(...[...code].map(c => c.charCodeAt(0) + 127397));
-  }
-  return '🌍';
-}
-
-function updateYourLocationUI(city, country) {
-  document.getElementById('yl-flag').textContent = '🌍';
-  document.getElementById('yl-city').textContent = city;
-  document.getElementById('yl-country').textContent = country;
-  document.getElementById('yl-tz').textContent = '—';
-  document.getElementById('yl-time').innerHTML = '--:--<span class="seconds">--</span><span class="ampm">--</span>';
-  document.getElementById('yl-date').textContent = '—';
-  document.getElementById('yl-day').textContent = '—';
-  document.getElementById('yl-weather').innerHTML = '<span class="weather-error">Location not available</span>';
-}
 
 // ─── Weather Codes ───
 
@@ -1512,25 +1342,8 @@ function updateClocks() {
     if (dayEl) dayEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' });
     if (dateEl) dateEl.textContent = loc.city === 'Maku' ? getPersianDateDisplay(new Date()) : new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   });
-  // Update your-location card
-  updateYourLocationClock();
   updateHolidaysInCards();
   updatePersianDateDisplay();
-}
-
-function updateYourLocationClock() {
-  if (!userLocation) return;
-  const card = document.getElementById('yourLocation');
-  if (!card) return;
-  const timeOpts = { timeZone: userLocation.tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-  const [hours, minutes, seconds] = new Date().toLocaleTimeString('en-US', timeOpts).split(/[:\s]/);
-  const ampm = new Date().toLocaleTimeString('en-US', timeOpts).includes('PM') ? 'PM' : 'AM';
-  const timeEl = document.getElementById('yl-time');
-  const dayEl = document.getElementById('yl-day');
-  const dateEl = document.getElementById('yl-date');
-  if (timeEl) timeEl.innerHTML = `${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>`;
-  if (dayEl) dayEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: userLocation.tz, weekday: 'long' });
-  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { timeZone: userLocation.tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function updateWeatherInCards() {
@@ -1697,69 +1510,11 @@ function renderUpcomingHolidays() {
 }
 
 
-// ─── Your Location Helpers ───
-function renderWeatherForEl(elId, current, daily) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const weatherInfo = getWeatherInfo(current.weather_code, current.is_day);
-  const windDirs = ['N','NE','E','SE','S','SW','W','NW'];
-  const windDir = windDirs[Math.round(current.wind_direction_10m / 45) % 8];
-  const sunrise = daily.sunrise[0] ? new Date(daily.sunrise[0]) : null;
-  const sunset = daily.sunset[0] ? new Date(daily.sunset[0]) : null;
-  const nowMs = Date.now();
-  let sunProgress = 50;
-  if (sunrise && sunset) {
-    sunProgress = Math.min(100, Math.max(0, ((nowMs - sunrise.getTime()) / (sunset.getTime() - sunrise.getTime())) * 100));
-  }
-  const sunriseStr = sunrise ? sunrise.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).replace(/:00 /, ' ').replace(/AM|PM/, m => m) : '—';
-  const sunsetStr = sunset ? sunset.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).replace(/:00 /, ' ').replace(/AM|PM/, m => m) : '—';
-  el.innerHTML = `
-    <div class="weather-row" style="display:flex;align-items:center;gap:10px;">
-      <span class="weather-icon">${weatherInfo.icon}</span>
-      <div>
-        <span class="weather-temp">${Math.round(current.temperature_2m)}°C</span>
-        <span class="weather-desc">${weatherInfo.desc}</span>
-      </div>
-    </div>
-    <div class="weather-details">
-      <span class="weather-detail">Feels like <span>${Math.round(current.apparent_temperature)}°C</span></span>
-      <span class="weather-detail">💧 <span>${current.relative_humidity_2m}%</span></span>
-      <span class="weather-detail">🌬️ ${Math.round(current.wind_speed_10m)} km/h ${windDir}</span>
-      <span class="weather-detail">☀️ UV ${current.uv_index}</span>
-    </div>
-    <div class="sun-bar"><div class="sun-bar-fill" style="width:${sunProgress}%"></div></div>
-    <div class="sun-times"><span class="sun-time">🌅 ${sunriseStr}</span><span class="sun-time">🌇 ${sunsetStr}</span></div>
-  `;
-}
-
-function renderHolidaysForEl(elId, tz) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const holidays = getHolidaysForTz(tz);
-  if (!holidays || holidays.length === 0) {
-    el.innerHTML = '<span class="no-holiday">No holidays this week</span>';
-    return;
-  }
-  const today = new Date();
-  const weekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const weekHolidays = holidays.filter(h => h.date >= today && h.date <= weekLater);
-  if (weekHolidays.length === 0) {
-    el.innerHTML = '<span class="no-holiday">No holidays this week</span>';
-    return;
-  }
-  el.innerHTML = weekHolidays.map(h => {
-    const diff = Math.ceil((h.date - today) / (1000 * 60 * 60 * 24));
-    const isToday = diff === 0;
-    return `<span class="holiday-badge ${isToday ? 'today' : 'upcoming'}">${isToday ? '🎉 ' : ''}${h.name}</span>`;
-  }).join('');
-}
-
 // ─── Init ───
 renderClocks();
 renderCalendar();
 renderUpcomingHolidays();
 fetchAllWeather();
-detectUserLocation();
 setInterval(tick, 1000);
 setInterval(fetchAllWeather, 10 * 60 * 1000);
 </script>
