@@ -9,10 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="WorldClock">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="Multi-timezone world clock with live weather, Persian & Gregorian calendar, and holiday tracking">
-<link rel="manifest" href="manifest-v2.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <title>World Clock — Multi-Zone</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -165,12 +164,12 @@
   /* Grid */
   .clock-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 32px;
   }
-  @media (max-width: 1100px) { .clock-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 750px) { .clock-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+  @media (max-width: 1300px) { .clock-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 1000px) { .clock-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
   @media (max-width: 480px) { .clock-grid { grid-template-columns: 1fr; gap: 14px; } }
 
   /* Clock card */
@@ -817,8 +816,9 @@ if (!window.matchMedia('(display-mode: standalone)').matches) {
 
 // ─── Configuration ───
 const LOCATIONS = [
-  { city: 'Maku', country: 'Iran', flag: '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABFCAYAAACBgCKhAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAAAAB3RJTUUH6AYcBgM2Q1aUIAAABsFJREFUeNrt2m1sE/cdwPHv2efYviQk2I4d24mVB9PQljwACYUC42kDaYVsNKyiGlXVUdSJadrWdoW9GVrZOiZNUKq10EqlXaVK215U2hMpa5kIRCoPSUqeSMgDDpAAIXGeznnw4+1FpU0IJu3VEqLf553vzj7rvr6//2efUvzBegMxb5nkEEhgIYGFBBYSWEhgIYGFBJbAQgILCSJBhQQWElhIYCGBhQQWElgAimEYctusnMEPh0O/yXzg8vGJJVxuLkePlNHWWoQeKZPAD5PTp9cBBvv36fcs/+wzP5FIJaMjSYJBK2DCn1fCjT43eqSMrqt5xGLHZIiey3p6qgkG//Lvx7p+nmj0BDZbE2NjOsmUE4djCsMIoKpmUql+xsdmaG8PU1nlQ5/IJCfnEJr2xLwMrD7Mb/7ixaPMzIwTDMLrBzUC+SYWl3gZHIxTUJhHb28Eh8NKZ2eU6ckWyiuWoKVrTEZ0Vq7yAyodHSEczr1EJjUy0s9J4LmktGwKu62Os3V5jI1FyfU4qf3HTVzOTIqKkmzYEECPqPTfNOH3eQhdu0F5RRqh6wsJ9Y0Tiyms3+AA4qSSXw1kzZfXEurrweU0s2ZtvwzRs+nlV00c/m2KgwdVHltsZdPmRzGbY8RjOZz+/Ap2e4L2zhjP7XqakXCShoaTOF3pOBcG8OXl4nLeobdniAk9QWmZi09ru1DNcXZ8R6el+Wu8/2E9O5/5IatWHZVJ1v/b8HA9CmZ+fsCCalFoaU/S2GBCwcLhw2coLLJgtQUZ6Nf55JO/UlB4nZodPjZuLOb6jSGmJi9jYOBwqnR3j2IYM2zbtoShsJXR0b9TVn6Wo0dSD3XchzrwubO/Y92672G3Z+Hx2Nj+7eV88cVlDOLs3v04dXV3GLrbxu4XFpGVZcMwRgFIpYbZui2Ni5emqT3Zjz5hwe32YbFohEK3eW5XEUferKapaZNcJs0mh3OEVSu/T1palKe3b6ezswOPx0oyUUiOOw2328rl1imKg168Hg8DA8X3PH9HTS6RyBgGKgMDvfT2Wigo9GAww+u/SLJs2Wlamh+TSdZs0bQuUqlpvLk2Dv7yY2Jxg5+9thRLWgb9N+NcbJjk12+s4cumCE6Xn+Pv/hmLCpkZCrm5Glc6J7FZFdo7GgnkWfjoo3PY7SZWVPmprv5qH6G+AsrKJfCsKFn8OBcvvE9L6ygvvlDK7z9uISs7HX2imZO116goVRnod7O80sLIsI3sLIXRMfD7LCimJKtXZhJPWPHlJikoWktt7Rm8Xgve3Gnefkfj1u0Yz9SsliF6Nuzbb8YwFCqrRojHrHR09hONwZtHz3P4SAexaIL1GzaTSIwQ6rlKONxKIm6gmg2Ghw00TcFsNkhLU5iZMYjFQFVhQjdwOUFRFCIRg/y8FK1tMUJ9SVQVFmYZ+P0qigKvvDotgcUcDNwFEnkekxvfJbCQwEICCwksJLCQwEICS2AhgYUEFhJYSGAhgYUElsBCAgsJLCSwkMBCAov/kQq8JYdh/voXZ5SXWDvjtngAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjQtMDYtMjhUMDY6MDM6NTQrMDA6MDCds7/AAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI0LTA2LTI4VDA2OjAzOjU0KzAwOjAw7O4HfAAAAABJRU5ErkJggg==" alt="Iran" style="width:1.5rem;height:auto;border-radius:3px;" />', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
+  { city: 'Maku', country: 'Iran', flag: '🦁☀️', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 37.1435, lon: 45.3781 },
   { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 41.0082, lon: 28.9784 },
+  { city: 'Izmir', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#fbbf24', accent: 'var(--accent-4)', lat: 38.4192, lon: 27.1287 },
   { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
   { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 },
 ];
