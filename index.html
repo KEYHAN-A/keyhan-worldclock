@@ -288,6 +288,15 @@
     margin-top: 6px;
     font-family: 'Inter', sans-serif;
   }
+  .persian-date-inline {
+    font-size: 0.82rem;
+    color: var(--accent-1);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+    direction: rtl;
+    letter-spacing: 0.02em;
+  }
 
   /* Weather section */
   .weather-section {
@@ -598,7 +607,6 @@
 const LOCATIONS = [
   { city: 'Maku', country: 'Iran', flag: '🇮🇷', tz: 'Asia/Tehran', color: '#7c5cfc', accent: 'var(--accent-1)', lat: 38.5136, lon: 45.5686 },
   { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 41.0082, lon: 28.9784 },
-  { city: 'Izmir', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', color: '#f472b6', accent: 'var(--accent-3)', lat: 38.4192, lon: 27.1287 },
   { city: 'Hamburg', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', color: '#5ce1e6', accent: 'var(--accent-2)', lat: 53.5511, lon: 9.9937 },
   { city: "Washington D.C.", country: 'United States', flag: '🇺🇸', tz: 'America/New_York', color: '#34d399', accent: 'var(--accent-5)', lat: 38.9072, lon: -77.0369 },
 ];
@@ -900,10 +908,16 @@ function changePersianMonth(delta) {
 }
 
 function updatePersianDateDisplay() {
-  const el = document.getElementById('persianDateDisplay');
-  if (!el) return;
   const p = gregorianToPersian(now2.getFullYear(), now2.getMonth() + 1, now2.getDate());
-  el.textContent = `${p.day} ${PERSIAN_MONTHS[p.month - 1]} ${p.year}`;
+  const dateStr = `${p.day} ${PERSIAN_MONTHS[p.month - 1]} ${p.year}`;
+  
+  // Update inline date under the time
+  const inlineEl = document.getElementById('persianDateInline');
+  if (inlineEl) inlineEl.textContent = dateStr;
+  
+  // Update calendar display
+  const el = document.getElementById('persianDateDisplay');
+  if (el) el.textContent = dateStr;
 }
 
 function tick() {
@@ -1076,6 +1090,7 @@ function renderClocks() {
       <div class="card-time">
         ${hours}:${minutes}<span class="seconds">${seconds}</span><span class="ampm">${ampm}</span>
       </div>
+      ${loc.city === 'Maku' ? '<div class="persian-date-inline" id="persianDateInline"></div>' : ''}
       <div class="card-date">${dateStr}</div>
       <div class="card-day" style="background:${loc.color}22;color:${loc.color};border:1px solid ${loc.color}33;">
         ${new Date().toLocaleDateString('en-US', { timeZone: loc.tz, weekday: 'long' })}
